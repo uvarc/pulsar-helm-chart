@@ -37,17 +37,21 @@ spec:
     - name: http
       port: {{ .Values.proxy.ports.http }}
       protocol: TCP
+      nodePort: {{ .Values.proxy.ports.http_nodeport }}
     - name: "{{ .Values.tcpPrefix }}pulsar"
       port: {{ .Values.proxy.ports.pulsar }}
       protocol: TCP
+      nodePort: {{ .Values.proxy.ports.pulsar_nodeport }}
     {{- end }}
     {{- if and .Values.tls.enabled .Values.tls.proxy.enabled }}
     - name: https
       port: {{ .Values.proxy.ports.https }}
       protocol: TCP
+      nodePort: {{ .Values.proxy.ports.https_nodeport }}
     - name: "{{ .Values.tlsPrefix }}pulsarssl"
       port: {{ .Values.proxy.ports.pulsarssl }}
       protocol: TCP
+      nodePort: {{ .Values.proxy.ports.pulsarssl_nodeport }}
     {{- end }}
   selector:
     {{- include "pulsar.matchLabels" . | nindent 4 }}
