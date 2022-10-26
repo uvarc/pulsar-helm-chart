@@ -36,8 +36,8 @@ This Helm Chart includes all the components of Apache Pulsar for a complete expe
     - [x] Proxies
 - [x] Management & monitoring components:
     - [x] Pulsar Manager
-    - [x] Prometheus
-    - [x] Grafana
+    - [x] Optional PodMonitors for each component (enabled by default)
+    - [x] [Kube-Prometheus-Stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) (as of 3.0.0)
 
 It includes support for:
 
@@ -93,12 +93,6 @@ To add this chart to your local Helm repository:
 helm repo add apache https://pulsar.apache.org/charts
 ```
 
-To use the helm chart:
-
-```bash
-helm install <release-name> apache/pulsar
-```
-
 ## Kubernetes cluster preparation
 
 You need a Kubernetes cluster whose version is 1.18 or higher in order to use this chart, due to the usage of certain Kubernetes features.
@@ -107,37 +101,15 @@ We provide some instructions to guide you through the preparation: http://pulsar
 
 ## Deploy Pulsar to Kubernetes
 
-1. Clone the Pulsar Helm charts repository.
+1. Configure your values file. The best way to know which values are available is to read the [values.yaml](./charts/pulsar/values.yaml).
+
+2. Install the chart:
 
     ```bash
-    git clone https://github.com/apache/pulsar-helm-chart
-    ```
-    ```bash
-    cd pulsar-helm-chart
+    helm install <release-name> -n <namespace> -f your-values.yaml apache/pulsar
     ```
 
-2. Run `prepare_helm_release.sh` to create required kubernetes resources for installing this Helm chart.
-    - A k8s namespace for installing the Pulsar release (if `-c` is specified)
-    - Create the JWT secret keys and tokens for three superusers: `broker-admin`, `proxy-admin`, and `admin`.
-      By default, it generates asymmetric pubic/private key pair. You can choose to generate symmetric secret key
-      by specifying `--symmetric` in the following command.
-        - `proxy-admin` role is used for proxies to communicate to brokers.
-        - `broker-admin` role is used for inter-broker communications.
-        - `admin` role is used by the admin tools.
-
-    ```bash
-    ./scripts/pulsar/prepare_helm_release.sh -n <k8s-namespace> -k <pulsar-release-name> -c
-    ```
-
-3. Use the Pulsar Helm charts to install Apache Pulsar. 
-
-    This command installs and starts Apache Pulsar.
-
-    ```bash 
-    $ helm install <pulsar-release-name> apache/pulsar
-    ```
-
-5. Access the Pulsar cluster
+3. Access the Pulsar cluster
 
     The default values will create a `ClusterIP` for the proxy you can use to interact with the cluster. To find the IP address of proxy use:
 
@@ -163,6 +135,40 @@ You can also checkout out the example values file for different deployments.
 - [Deploy a Pulsar cluster with TLS encryption](examples/values-tls.yaml)
 - [Deploy a Pulsar cluster with JWT authentication using symmetric key](examples/values-jwt-symmetric.yaml)
 - [Deploy a Pulsar cluster with JWT authentication using asymmetric key](examples/values-jwt-asymmetric.yaml)
+
+## Disabling Kube-Prometheus-Stack CRDs
+
+In order to disable the kube-prometheus-stack fully, it is necessary to add the following to your `values.yaml`:
+
+```yaml
+kube-prometheus-stack:
+  enabled: false
+  prometheusOperator:
+    enabled: false
+  grafana:
+    enabled: false
+  alertmanager:
+    enabled: false
+  prometheus:
+    enabled: false
+```
+
+Otherwise, the helm chart installation will attempt to install the CRDs for the kube-prometheus-stack. Additionally,
+you'll need to disable each of the component's `PodMonitors`. This is shown in some [examples](./examples) and is
+verified in some [tests](./.ci/clusters).
+
+## Grafana Dashboards
+
+The Apache Pulsar Helm Chart uses the `kube-prometheus-stack` Helm Chart to deploy Grafana. Dashboards are loaded via a Kubernetes `ConfigMap`. Please see their documentation for loading those dashboards.
+
+The `apache/pulsar` GitHub repo contains some dashboards [here](https://github.com/apache/pulsar/tree/master/grafana).
+
+### Third Party Dashboards
+
+* StreamNative provides Grafana Dashboards for Apache Pulsar in this [GitHub repository](https://github.com/streamnative/apache-pulsar-grafana-dashboard).
+* DataStax provides Grafana Dashboards for Apache Pulsar in this [GitHub repository](https://github.com/datastax/pulsar-helm-chart/tree/master/helm-chart-sources/pulsar/grafana-dashboards).
+
+Note: if you have third party dashboards that you would like included in this list, please open a pull request.
 
 ## Upgrading
 
@@ -254,13 +260,4 @@ tips and tricks for troubleshooting common issues. Please examine these first be
 
 ## Release Process
 
-1. Bump the version in [charts/pulsar/Chart.yaml](https://github.com/apache/pulsar-helm-chart/blob/master/charts/pulsar/Chart.yaml#L24).
-
-2. Send a pull request for reviews.
-
-3. After the pull request is approved, merge it. The release workflow will be triggered automatically.
-   - It creates a tag named `pulsar-<version>`.
-   - Published the packaged helm chart to Github releases.
-   - Update the `charts/index.yaml` in Pulsar website.
-
-4. Trigger the Pulsar website build to make the release available under https://pulsar.apache.org/charts.
+See [RELEASE.md](RELEASE.md)

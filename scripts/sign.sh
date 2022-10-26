@@ -1,4 +1,4 @@
-#
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,23 +15,20 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
+set -euo pipefail
 
-apiVersion: v2
-appVersion: "2.10.2"
-description: Apache Pulsar Helm chart for Kubernetes
-name: pulsar
-version: 3.0.0
-home: https://pulsar.apache.org
-sources:
-- https://github.com/apache/pulsar
-- https://github.com/apache/pulsar-helm-chart
-icon: https://pulsar.apache.org/img/pulsar.svg
-maintainers:
-- name: The Apache Pulsar Team
-  email: dev@pulsar.apache.org
-dependencies:
-  - name: kube-prometheus-stack
-    version: 41.x.x
-    repository: https://prometheus-community.github.io/helm-charts
-    condition: kube-prometheus-stack.enabled
+# Use this to sign the tar balls generated from
+# python setup.py sdist --formats=gztar
+# ie. sign.sh <my_tar_ball>
+# you will still be required to type in your signing key password
+# or it needs to be available in your keychain
+
+# Which key to sign releases with? This can be a (partial) email address or a
+# key id. By default use any apache.org key
+SIGN_WITH="${SIGN_WITH:-apache.org}"
+
+for name in "${@}"
+do
+    gpg --yes --armor --local-user "$SIGN_WITH" --output "${name}.asc" --detach-sig "${name}"
+    shasum -a 512 "${name}" > "${name}.sha512"
+done
